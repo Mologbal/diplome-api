@@ -10,7 +10,6 @@ module.exports.auth = (req, res, next) => {
   const token = authorization.replace('Bearer ', '');
   let payload;
   try {
-    console.log(process.env);
     payload = jwt.verify(token, process.env.NODE_ENV === 'production' ? process.env.YOUR_JWT : 'secret-code');
   } catch (err) {
     next(new UnauthorizedError('Сначала авторизируйтесь'));

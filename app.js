@@ -14,7 +14,7 @@ const { auth } = require('./middlewares/auth');
 const { PORT = 3002 } = process.env;
 const app = express();
 
-mongoose.connect('mongodb://127.0.0.1:27017/bitfilmsdb', {
+mongoose.connect('mongodb://127.0.0.1:27017/moviesdb', {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 });
@@ -39,9 +39,9 @@ app.use(cors({
     'http://api.molow.nomoredomains.icu',
     'https://api.molow.nomoredomains.icu'],
 }));
-
+// Регистрация и авторизация
 app.use('/', loginAndRegister);
-
+// Защита роутов от неавторизованных пользователей
 app.use(auth);
 
 // Логи ошибок, запись ошибок в файл
@@ -50,13 +50,14 @@ const { requestLogger, errorLoger } = require('./middlewares/logger');
 // Логгер запросов до маршрутов
 app.use(requestLogger);
 
-app.use('/', userRouter);
+// Защищенные роуты
+app.use(userRouter);
 app.use('/', movieRouter);
 app.use('*', (req, res, next) => {
   next(new NotFound('Страница не найдена'));
 });
 
-// Логгер ошибок
+// Логгер ошибок и далее их обработка
 app.use(errorLoger);
 
 app.use(errors());
