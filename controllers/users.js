@@ -10,7 +10,7 @@ const getUserInfo = (req, res, next) => {
   const userId = req.user._id;
 
   User.findById(userId)
-    .orFail(new NotFound('Пользователь не найден'))
+    .orFail(new NotFound())
     .then((user) => res.send(user))
     .catch((err) => next(err));
 };
@@ -20,12 +20,6 @@ const createUser = (req, res, next) => {
   const {
     name, email, password,
   } = req.body;
-  if (!email) {
-    throw new BadRequestError('Email не может быть пустым');
-  }
-  if (!password) {
-    throw new BadRequestError('Password не может быть пустым');
-  }
   return bcrypt
     .hash(password, 10)
     .then((hash) => User.create({
@@ -40,9 +34,9 @@ const createUser = (req, res, next) => {
     })
     .catch((err) => {
       if (err.code === 11000) {
-        next(new ConflictError('Такой пользователь уже существует'));
+        next(new ConflictError());
       } else if (err.name === 'ValidationError') {
-        next(new BadRequestError('Переданы некорректные данные при создании пользователя'));
+        next(new BadRequestError());
       } else {
         next(err);
       }
@@ -69,12 +63,12 @@ const updateUserInfo = (req, res, next) => {
     { new: true, runValidators: true },
   )
     .orFail(() => {
-      throw new NotFound('Такого пользователя не существует');
+      throw new NotFound();
     })
     .then((user) => res.status(200).send(user))
     .catch((err) => {
       if (err.name === 'ValidationError') {
-        next(new BadRequestError('Некорректные данные пользователя.'));
+        next(new BadRequestError());
       } else {
         next(err);
       }

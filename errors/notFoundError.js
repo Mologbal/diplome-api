@@ -1,10 +1,9 @@
-const { ApplicationError } = require('./basicError');
 const { ErrorNotFound } = require('./allErrors');
 
-class NotFound extends ApplicationError {
-  constructor(message) {
-    super(ErrorNotFound, message);
+class NotFoundError extends Error {
+  constructor(message = 'Запрашиваемый ресурс не обнаружен') {
+    super(message);
+    this.statusCode = ErrorNotFound;
   }
 }
-
-module.exports = NotFound;
+module.exports = NotFoundError;

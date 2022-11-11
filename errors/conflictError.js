@@ -1,10 +1,9 @@
-const { ApplicationError } = require('./basicError');
 const { ErrorConflict } = require('./allErrors');
 
-class ConflictError extends ApplicationError {
-  constructor(message) {
-    super(ErrorConflict, message);
+class ConflictError extends Error {
+  constructor(message = 'Этот Email уже существует') {
+    super(message);
+    this.statusCode = ErrorConflict;
   }
 }
-
 module.exports = ConflictError;
