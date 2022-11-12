@@ -5,7 +5,7 @@ const ForbiddenError = require('../errors/forbiddenError');
 
 // выдаст список фильмов, созданных текущим пользователем
 const getMovies = (req, res, next) => {
-  Movie.find({ ...req.body, owner: req.user._id })
+  Movie.find({ owner: req.user._id })
     .then((movies) => {
       res.send(movies);
     })
@@ -36,21 +36,31 @@ const createMovie = (req, res, next) => {
 
 // удалит фильм по переданному _id
 const deleteMovie = (req, res, next) => {
-  const { filmId } = req.params;
   const ownerId = req.user._id;
-
-  Movie
-    .findById(filmId)
-    .orFail(new NotFound())
+  const { objectId } = req.params;
+  Movie.findById(objectId)
     .then((movie) => {
-      if (movie.owner.toString() !== ownerId) {
-        return next(new ForbiddenError());
+      if (movie === null) {
+        throw new NotFound();
       }
-      return movie.remove()
-        .then(() => res.send({ message: 'Фильм успешно удалён!' }))
-        .catch((err) => next(err));
+      if (movie.owner.toString() !== ownerId) {
+        throw new ForbiddenError();
+      }
+      return movie;
     })
-    .catch((err) => next(err));
+    .then((movie) => {
+      Movie.deleteOne(movie)
+        .then(() => {
+          res.status(200).send({ message: 'Фильм успешно удалён!' });
+        });
+    })
+    .catch((err) => {
+      if (err.name === 'CastError') {
+        next(new BadRequestError());
+        return;
+      }
+      next(err);
+    });
 };
 
 module.exports = {

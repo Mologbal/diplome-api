@@ -13,11 +13,12 @@ const { error } = require('./errors/internalServerError');
 const loginAndRegister = require('./routes/index');
 const { auth } = require('./middlewares/auth');
 const { requestLogger, errorLoger } = require('./middlewares/logger');
+const { mongoServer } = require('./utils/constants');
 
 const { PORT = 3002, DB_HOST, NODE_ENV } = process.env;
 const app = express();
 
-mongoose.connect(NODE_ENV === 'production' ? DB_HOST : 'mongodb://127.0.0.1:27017/moviesdb', {
+mongoose.connect(NODE_ENV === 'production' ? DB_HOST : mongoServer, {
   useNewUrlParser: true,
 });
 app.use(bodyParser.json());

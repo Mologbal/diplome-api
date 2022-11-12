@@ -68,10 +68,12 @@ const updateUserInfo = (req, res, next) => {
     .then((user) => res.status(200).send(user))
     .catch((err) => {
       if (err.name === 'ValidationError') {
-        next(new BadRequestError());
-      } else {
-        next(err);
+        return next(new BadRequestError());
       }
+      if (err.code === 11000) {
+        return next(new ConflictError());
+      }
+      return next(err);
     });
 };
 
