@@ -3,9 +3,10 @@ const { registerValidation, loginValidation } = require('../validation/auth');
 
 const app = express();
 
-const { createUser, login } = require('../controllers/users');
+const { signUp, signIn, signOut } = require('../controllers/users');
 
-app.post('/signin', loginValidation, login);
-app.post('/signup', registerValidation, createUser);
+app.post('/signin', loginValidation, signIn);
+app.post('/signup', registerValidation, signUp);
+app.get('/signout', signOut);
 
 module.exports = app;

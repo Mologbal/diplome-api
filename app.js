@@ -4,7 +4,8 @@ const helmet = require('helmet');
 const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
 const { errors } = require('celebrate');
-const cors = require('cors');
+const cookieParser = require('cookie-parser');
+const cors = require('./middlewares/cors');
 const ratelimiter = require('./utils/rateLimiter');
 const userRouter = require('./routes/users');
 const movieRouter = require('./routes/movies');
@@ -31,17 +32,7 @@ app.get('/crash-test', () => {
   }, 0);
 });
 
-app.use(cors({
-  origin: ['https://praktikum.tk',
-    'http://praktikum.tk',
-    'localhost:3000',
-    'http://localhost:3000',
-    'https://localhost:3000',
-    'https://localhost:3001',
-    'https://localhost:3002',
-    'http://api.molow.nomoredomains.icu',
-    'https://api.molow.nomoredomains.icu'],
-}));
+app.use(cors);
 
 // Логгер запросов до маршрутов
 app.use(requestLogger);
@@ -49,6 +40,8 @@ app.use(requestLogger);
 app.use(ratelimiter);
 
 app.use(helmet());
+
+app.use(cookieParser());
 
 // Регистрация и авторизация
 app.use('/', loginAndRegister);

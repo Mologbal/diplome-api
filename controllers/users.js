@@ -1,82 +1,115 @@
 const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 const User = require('../models/user');
-const NotFound = require('../errors/notFoundError');
 const ConflictError = require('../errors/conflictError');
 const BadRequestError = require('../errors/badRequestError');
-const { getJwtToken } = require('../utils/jwt');
+const NotFoundError = require('../errors/notFoundError');
+const UnauthorizedError = require('../errors/unauthorizedError');
 
-// выдаст информацию о текущем пользователе
-const getUserInfo = (req, res, next) => {
-  const userId = req.user._id;
+const signUp = (req, res, next) => {
+  const { name, email, password } = req.body;
 
-  User.findById(userId)
-    .orFail(new NotFound())
-    .then((user) => res.send(user))
-    .catch((err) => next(err));
-};
-
-// создаст нового пользователя
-const createUser = (req, res, next) => {
-  const {
-    name, email, password,
-  } = req.body;
-  return bcrypt
-    .hash(password, 10)
-    .then((hash) => User.create({
-      name,
-      email,
-      password: hash,
-    }))
-    .then((user) => {
-      const newUser = { ...user._doc };
-      delete newUser.password;
-      res.status(201).send(newUser);
-    })
-    .catch((err) => {
-      if (err.code === 11000) {
-        next(new ConflictError());
-      } else if (err.name === 'ValidationError') {
-        next(new BadRequestError());
-      } else {
-        next(err);
-      }
-    });
-};
-
-// функция входа
-const login = (req, res, next) => {
-  const { email, password } = req.body;
-  return User.findUserByCredentials(email, password)
-    .then((user) => {
-      const token = getJwtToken(user._id);
-      return res.send({ token });
+  bcrypt.hash(password, 10)
+    .then((hash) => {
+      User.create({
+        name, email, password: hash,
+      })
+        .then((user) => res.send({
+          _id: user._id,
+          name: user.name,
+          email: user.email,
+        }))
+        .catch((err) => {
+          if (err.name === 'ValidationError') {
+            next(new BadRequestError());
+          } else if (err.code === 11000) {
+            next(new ConflictError());
+          } else {
+            next(err);
+          }
+        });
     })
     .catch(next);
 };
 
-// обновит информацию о пользователе
-const updateUserInfo = (req, res, next) => {
-  const { name, email } = req.body;
+const signIn = (req, res, next) => {
+  const { email, password } = req.body;
+
+  User.findUserByCredentials(email, password)
+    .then((user) => {
+      if (!user) {
+        next(new UnauthorizedError());
+        return;
+      }
+
+      const token = jwt.sign(
+        { _id: user._id },
+        process.env.NODE_ENV === 'production' ? process.env.JWT_SECRET : 'secret-code',
+        { expiresIn: '7d' },
+      );
+
+      res
+        .cookie('access_token', token, {
+          sameSite: 'none',
+          secure: true,
+        })
+        .send({
+          _id: user._id,
+          name: user.name,
+          email: user.email,
+        });
+    })
+    .catch(next);
+};
+
+const signOut = (req, res) => {
+  res.clearCookie('access_token').send({ message: 'logout' });
+};
+
+const getCurrentUser = (req, res, next) => {
+  User.findById(req.user._id)
+    .then((user) => {
+      if (!user) {
+        return next(new NotFoundError());
+      }
+
+      return res.send(user);
+    })
+    .catch(next);
+};
+
+const updateUser = (req, res, next) => {
+  const { email, name } = req.body;
+
   User.findByIdAndUpdate(
     req.user._id,
     { name, email },
-    { new: true, runValidators: true },
+    { new: true, runValidators: true, upsert: false },
   )
-    .orFail(() => {
-      throw new NotFound();
+    .then((user) => {
+      if (!user) {
+        return next(new NotFoundError());
+      }
+
+      return res.send(user);
     })
-    .then((user) => res.status(200).send(user))
     .catch((err) => {
-      if (err.name === 'ValidationError') {
-        return next(new BadRequestError());
+      if (err.name === 'ValidationError' || err.name === 'CastError') {
+        next(new BadRequestError());
+        return;
       }
       if (err.code === 11000) {
-        return next(new ConflictError());
+        next(new ConflictError());
+        return;
       }
-      return next(err);
+      next(err);
     });
 };
 
 module.exports = {
-  createUser, updateUserInfo, getUserInfo, login,
+  signUp,
+  signIn,
+  signOut,
+  getCurrentUser,
+  updateUser,
 };
